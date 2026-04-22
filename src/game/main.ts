@@ -1,19 +1,23 @@
 import { Boot } from "./scenes/boot";
-import { GameOver } from "./scenes/game-over";
-import { Level1 as MainGame } from "./scenes/level1";
-import { MainMenu } from "./scenes/main-menu";
+import { Level1 } from "./scenes/level1";
 import { AUTO, Game } from "phaser";
 import { Preloader } from "./scenes/preloader";
 
-//  Find out more information about the Game Config at:
-//  https://docs.phaser.io/api-documentation/typedef/types-core#gameconfig
+/**
+ * Main Phaser game config for Detective Code.
+ *
+ * Scene order: Boot → Preloader → Level1
+ * MainMenu and GameOver have been removed — the game starts directly
+ * in Level1 after assets are loaded. A proper level-complete flow
+ * will be added later via the BaseLevel continue arrow.
+ */
 const config: Phaser.Types.Core.GameConfig = {
-    title: "My Untitled CISC374 Game",
-    version: "0.0.1",
+    title: "Detective Code",
+    version: "0.1.0",
     type: AUTO,
     parent: "game-container",
-    backgroundColor: "#ffffff",
-    scene: [Boot, Preloader, MainMenu, MainGame, GameOver],
+    backgroundColor: "#1a1a1a",
+    scene: [Boot, Preloader, Level1],
     scale: {
         parent: "phaser-game",
         mode: Phaser.Scale.FIT,
@@ -25,7 +29,7 @@ const config: Phaser.Types.Core.GameConfig = {
         default: "arcade",
         arcade: {
             debug: false,
-            gravity: { x: 0, y: 300 },
+            gravity: { x: 0, y: 0 }, // No gravity needed for this game
         },
     },
     input: {
