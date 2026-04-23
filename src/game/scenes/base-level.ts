@@ -79,6 +79,7 @@ export abstract class BaseLevel extends Scene {
 
     // Stored for re-loading transcript variables before each telephone call
     private levelTranscript = "";
+    private levelCorrectAnswer = "";
 
     // ── Layout objects ────────────────────────────────────────────────────────
     protected desk!: GameObjects.Rectangle;
@@ -126,6 +127,7 @@ export abstract class BaseLevel extends Scene {
     private cursorVisible = true;
     private cursorTimer = 0;
     private readonly CURSOR_BLINK_MS = 530;
+    private terminalSolved = false;
 
     // ── Abstract ──────────────────────────────────────────────────────────────
     protected abstract getLevelData(): {
@@ -140,6 +142,7 @@ export abstract class BaseLevel extends Scene {
         const levelData = this.getLevelData();
 
         this.levelTranscript = levelData.transcript;
+        this.levelCorrectAnswer = levelData.correctAnswer;
         this.executor = new PythonExecutor(levelData.functions);
         this.executor.loadTranscript(levelData.transcript);
 
@@ -542,37 +545,8 @@ export abstract class BaseLevel extends Scene {
             const key = event.key;
             const line = this.terminalLines[this.cursorLine];
 
-            if (key === "Backspace") {
-                if (this.cursorCol > 0) {
-                    this.terminalLines[this.cursorLine] =
-                        line.slice(0, this.cursorCol - 1) +
-                        line.slice(this.cursorCol);
-                    this.cursorCol--;
-                } else if (this.cursorLine > 0) {
-                    const prevLine = this.terminalLines[this.cursorLine - 1];
-                    this.terminalLines[this.cursorLine - 1] = prevLine + line;
-                    this.terminalLines.splice(this.cursorLine, 1);
-                    this.cursorLine--;
-                    this.cursorCol = prevLine.length;
-                }
-            } else if (key === "Delete") {
-                if (this.cursorCol < line.length) {
-                    this.terminalLines[this.cursorLine] =
-                        line.slice(0, this.cursorCol) +
-                        line.slice(this.cursorCol + 1);
-                } else if (this.cursorLine < this.terminalLines.length - 1) {
-                    this.terminalLines[this.cursorLine] =
-                        line + this.terminalLines[this.cursorLine + 1];
-                    this.terminalLines.splice(this.cursorLine + 1, 1);
-                }
-            } else if (key === "Enter") {
-                const before = line.slice(0, this.cursorCol);
-                const after = line.slice(this.cursorCol);
-                this.terminalLines[this.cursorLine] = before;
-                this.terminalLines.splice(this.cursorLine + 1, 0, after);
-                this.cursorLine++;
-                this.cursorCol = 0;
-            } else if (key === "ArrowUp") {
+            // Movement keys always work, even after solving
+            if (key === "ArrowUp") {
                 if (this.cursorLine > 0) {
                     this.cursorLine--;
                     this.cursorCol = Math.min(
@@ -606,12 +580,51 @@ export abstract class BaseLevel extends Scene {
                 this.cursorCol = 0;
             } else if (key === "End") {
                 this.cursorCol = this.terminalLines[this.cursorLine].length;
-            } else if (key.length === 1) {
-                this.terminalLines[this.cursorLine] =
-                    line.slice(0, this.cursorCol) +
-                    key +
-                    line.slice(this.cursorCol);
-                this.cursorCol++;
+
+                // Editing keys are locked after solving
+            } else if (!this.terminalSolved) {
+                if (key === "Backspace") {
+                    if (this.cursorCol > 0) {
+                        this.terminalLines[this.cursorLine] =
+                            line.slice(0, this.cursorCol - 1) +
+                            line.slice(this.cursorCol);
+                        this.cursorCol--;
+                    } else if (this.cursorLine > 0) {
+                        const prevLine =
+                            this.terminalLines[this.cursorLine - 1];
+                        this.terminalLines[this.cursorLine - 1] =
+                            prevLine + line;
+                        this.terminalLines.splice(this.cursorLine, 1);
+                        this.cursorLine--;
+                        this.cursorCol = prevLine.length;
+                    }
+                } else if (key === "Delete") {
+                    if (this.cursorCol < line.length) {
+                        this.terminalLines[this.cursorLine] =
+                            line.slice(0, this.cursorCol) +
+                            line.slice(this.cursorCol + 1);
+                    } else if (
+                        this.cursorLine <
+                        this.terminalLines.length - 1
+                    ) {
+                        this.terminalLines[this.cursorLine] =
+                            line + this.terminalLines[this.cursorLine + 1];
+                        this.terminalLines.splice(this.cursorLine + 1, 1);
+                    }
+                } else if (key === "Enter") {
+                    const before = line.slice(0, this.cursorCol);
+                    const after = line.slice(this.cursorCol);
+                    this.terminalLines[this.cursorLine] = before;
+                    this.terminalLines.splice(this.cursorLine + 1, 0, after);
+                    this.cursorLine++;
+                    this.cursorCol = 0;
+                } else if (key.length === 1) {
+                    this.terminalLines[this.cursorLine] =
+                        line.slice(0, this.cursorCol) +
+                        key +
+                        line.slice(this.cursorCol);
+                    this.cursorCol++;
+                }
             }
 
             this.cursorVisible = true;
@@ -741,17 +754,44 @@ export abstract class BaseLevel extends Scene {
         if (this.activeAction === "terminal") this.closeTerminal();
         if (this.activeAction === "telephone") this.closeTelephone();
         this.activeAction = "printer";
+
+        // Reset and reload transcript variables so the full program
+        // runs with a clean state each time the printer is clicked
+        this.executor.resetPlayerVariables();
+        this.executor.loadTranscript(this.levelTranscript);
+        this.executor.reset();
+
+        // Run the entire terminal content
+        this.executor.runAll(this.getTerminalContent());
+
+        // Display the print() output in the report panel
+        const output = this.executor.getPrintOutput();
+        this.setReportText(output.length > 0 ? output : "(no print output)");
+
+        // Show appropriate hint depending on the output
+        if (output.length === 0) {
+            this.showHintBox(
+                "Your report is empty! Use print() to submit your findings. " +
+                    "Example: print(two_factor(name))",
+                false,
+            );
+        } else if (output.trim() === this.levelCorrectAnswer.trim()) {
+            this.showHintBox(
+                "This report looks correct! Press the green arrow when you " +
+                    "are ready to move onto the next mystery.",
+                true,
+            );
+            this.terminalSolved = true;
+        } else {
+            this.showHintBox(
+                "This report doesn't look right. Try calling help() to review " +
+                    "the case details, or use the telephone to investigate further.",
+                false,
+            );
+        }
+
         this.reportContainer.x = this.REPORT_DEFAULT_X;
         this.reportContainer.setVisible(true);
-        // Full print logic connected in Task 6
-    }
-
-    // ── Bubble display helper ─────────────────────────────────────────────────
-    private showBubble(message: string) {
-        this.bubbleContainer.x = this.BUBBLE_DEFAULT_X;
-        this.bubbleText.setText(message);
-        this.redrawBubbleTail();
-        this.bubbleContainer.setVisible(true);
     }
 
     protected closeTerminal() {
@@ -795,6 +835,14 @@ export abstract class BaseLevel extends Scene {
 
     protected setReportText(text: string) {
         this.reportText.setText("Report written by Detective Code\n\n" + text);
+    }
+
+    // REQUIRED for telephone
+    private showBubble(message: string) {
+        this.bubbleContainer.x = this.BUBBLE_DEFAULT_X;
+        this.bubbleText.setText(message);
+        this.redrawBubbleTail();
+        this.bubbleContainer.setVisible(true);
     }
 
     protected getTerminalContent(): string {
