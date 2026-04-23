@@ -1,15 +1,15 @@
 import { EventBus } from "../event-bus";
 import { BaseLevel } from "./base-level";
+import type { LevelFunction } from "../python-executor";
 
 /**
  * Level 1 — "System Login"
  *
  * The detective needs to log into the terminal system.
- * The only way in is to call two_factor(name) to receive a PIN.
- * The player must print the result to submit their login attempt.
- *
  * Solution: print(two_factor(name))
  * Where name = "Code" is already initialized in the transcript.
+ *
+ * Also includes outer(inner()) as a test case for nested function calls.
  */
 export class Level1 extends BaseLevel {
     constructor() {
@@ -21,10 +21,13 @@ export class Level1 extends BaseLevel {
         EventBus.emit("current-scene-ready", this);
     }
 
-    protected getLevelData() {
+    protected getLevelData(): {
+        transcript: string;
+        correctAnswer: string;
+        functions: Record<string, LevelFunction>;
+        initialTerminalLines?: string[];
+    } {
         return {
-            // Shown in the read-only transcript panel (top half of smartboard).
-            // Written as Python comments + variable initialization.
             transcript: [
                 "# SYSTEM LOGIN REQUIRED",
                 "# ----------------------",
@@ -37,11 +40,10 @@ export class Level1 extends BaseLevel {
                 'name = "Code"',
             ].join("\n"),
 
-            // The correct answer the printer output must match.
-            // two_factor("Code") returns this PIN.
             correctAnswer: "PIN: 7429",
 
-            // Function definitions — never shown to the player.
+            initialTerminalLines: ["help()"],
+
             functions: {
                 two_factor: (...args: (string | number | boolean)[]) => {
                     if (args.length === 0) {
@@ -52,9 +54,7 @@ export class Level1 extends BaseLevel {
                         );
                     }
                     const name = String(args[0]);
-                    if (name === "Code") {
-                        return "PIN: 7429";
-                    }
+                    if (name === "Code") return "PIN: 7429";
                     return `Unknown agent: ${name}. Access denied.`;
                 },
 
@@ -89,12 +89,34 @@ export class Level1 extends BaseLevel {
                         `No information found for '${funcName}'.`
                     );
                 },
+
+                // ── Nested call test functions ─────────────────────────────
+                // These exist to test the telephone's cursor-based call logic.
+                // outer(inner()) should return 4.
+                // Cursor over "inner" → calls inner(), shows "this is the inner function", returns 3
+                // Cursor over "outer" → resolves inner() first, then calls outer(3), returns 4
+
+                inner: (...args: (string | number | boolean)[]): string => {
+                    void args;
+                    return "this is the inner function";
+                },
+
+                outer: (...args: (string | number | boolean)[]) => {
+                    if (args.length === 0) {
+                        return "this is the outer function";
+                    }
+                    // If given the result of inner() as a number, increment it
+                    const val = Number(args[0]);
+                    if (!isNaN(val)) {
+                        return String(val + 1);
+                    }
+                    return "this is the outer function";
+                },
             },
         };
     }
 
     changeScene() {
-        // Once Level 2 exists, change this to: this.scene.start("Level2")
         this.scene.start("GameOver");
     }
 }
