@@ -25,7 +25,7 @@ export class MainMenu extends Scene implements ChangeableScene {
 
         //主标题
         this.title = this.add
-            .text(512, 420, "Detective Code Project", {
+            .text(512, 420, "Detective Code", {
                 fontFamily: "Arial Black",
                 fontSize: 48,
                 color: "#f5d742",
@@ -38,7 +38,7 @@ export class MainMenu extends Scene implements ChangeableScene {
 
         // 副标题
         this.subtitle = this.add
-            .text(512, 480, "CISC374-Final", {
+            .text(512, 480, "CISC374 Final Project", {
                 fontFamily: "Arial",
                 fontSize: 20,
                 color: "#ffffff",
@@ -86,29 +86,5 @@ export class MainMenu extends Scene implements ChangeableScene {
         }
 
         this.scene.start("LevelSelect");
-    }
-
-    moveSprite(callback: ({ x, y }: { x: number; y: number }) => void) {
-        if (this.logoTween) {
-            if (this.logoTween.isPlaying()) {
-                this.logoTween.pause();
-            } else {
-                this.logoTween.play();
-            }
-        } else {
-            this.logoTween = this.tweens.add({
-                targets: this.logo,
-                x: { value: 750, duration: 3000, ease: "Back.easeInOut" },
-                y: { value: 80, duration: 1500, ease: "Sine.easeOut" },
-                yoyo: true,
-                repeat: -1,
-                onUpdate: () => {
-                    callback({
-                        x: Math.floor(this.logo.x),
-                        y: Math.floor(this.logo.y),
-                    });
-                },
-            });
-        }
     }
 }

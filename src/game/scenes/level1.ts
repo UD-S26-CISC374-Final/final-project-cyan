@@ -18,9 +18,101 @@ export class Level1 extends BaseLevel {
 
     create() {
         super.create();
+
+        const { height } = this.scale;
+
+        // 左下角按钮
+        const backButton = this.add
+            .text(20, height - 20, "← Menu", {
+                fontFamily: "Arial Black",
+                fontSize: 20,
+                color: "#111111",
+                backgroundColor: "#f5d742",
+                padding: { x: 12, y: 6 },
+            })
+            .setOrigin(0, 1)
+            .setInteractive({ useHandCursor: true })
+            .setDepth(1000);
+
+        // 悬停效果
+        backButton.on("pointerover", () => {
+            backButton.setStyle({ backgroundColor: "#ffe066" });
+        });
+
+        backButton.on("pointerout", () => {
+            backButton.setStyle({ backgroundColor: "#f5d742" });
+        });
+
+        // 点击 → 弹确认框
+        backButton.on("pointerdown", () => {
+            this.showConfirmDialog();
+        });
+
         EventBus.emit("current-scene-ready", this);
     }
+    private showConfirmDialog() {
+        const { width, height } = this.scale;
 
+        // 半透明遮罩
+        const overlay = this.add
+            .rectangle(0, 0, width, height, 0x000000, 0.6)
+            .setOrigin(0)
+            .setDepth(2000);
+
+        // 弹窗背景
+        const box = this.add
+            .rectangle(width / 2, height / 2, 400, 200, 0x222222)
+            .setStrokeStyle(2, 0xf5d742)
+            .setDepth(2001);
+
+        // 提示文字
+        const text = this.add
+            .text(width / 2, height / 2 - 40, "Return to Main Menu?", {
+                fontFamily: "Arial",
+                fontSize: 22,
+                color: "#ffffff",
+            })
+            .setOrigin(0.5)
+            .setDepth(2002);
+
+        //YES 按钮
+        const yesBtn = this.add
+            .text(width / 2 - 80, height / 2 + 40, "Yes", {
+                fontSize: 20,
+                color: "#111111",
+                backgroundColor: "#f5d742",
+                padding: { x: 15, y: 8 },
+            })
+            .setOrigin(0.5)
+            .setInteractive()
+            .setDepth(2002);
+
+        //NO 按钮
+        const noBtn = this.add
+            .text(width / 2 + 80, height / 2 + 40, "No", {
+                fontSize: 20,
+                color: "#ffffff",
+                backgroundColor: "#444444",
+                padding: { x: 15, y: 8 },
+            })
+            .setOrigin(0.5)
+            .setInteractive()
+            .setDepth(2002);
+
+        // YES → 返回主菜单
+        yesBtn.on("pointerdown", () => {
+            this.scene.start("MainMenu");
+        });
+
+        // NO → 关闭弹窗
+        noBtn.on("pointerdown", () => {
+            overlay.destroy();
+            box.destroy();
+            text.destroy();
+            yesBtn.destroy();
+            noBtn.destroy();
+        });
+    }
     protected getLevelData(): {
         transcript: string;
         correctAnswer: string;
