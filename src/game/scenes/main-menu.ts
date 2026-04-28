@@ -85,7 +85,7 @@ export class MainMenu extends Scene implements ChangeableScene {
             this.logoTween = null;
         }
 
-        this.scene.start("Level1");
+        this.scene.start("LevelSelect");
     }
 
     moveSprite(callback: ({ x, y }: { x: number; y: number }) => void) {
