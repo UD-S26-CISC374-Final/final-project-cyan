@@ -236,6 +236,8 @@ export abstract class BaseLevel extends Scene {
                 fontSize: "14px",
                 color: "#39ff14",
                 wordWrap: { width: this.SB_W - 28 },
+                padding: { bottom: 8 },
+                lineSpacing: 6,
             })
             .setOrigin(0, 0);
 
