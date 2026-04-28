@@ -67,7 +67,7 @@ export class Level1 extends BaseLevel {
 
         // 提示文字
         const text = this.add
-            .text(width / 2, height / 2 - 40, "Return to Main Menu?", {
+            .text(width / 2, height / 2 - 40, "Return to Level Select?", {
                 fontFamily: "Arial",
                 fontSize: 22,
                 color: "#ffffff",
@@ -101,7 +101,7 @@ export class Level1 extends BaseLevel {
 
         // YES → 返回主菜单
         yesBtn.on("pointerdown", () => {
-            this.scene.start("MainMenu");
+            this.scene.start("LevelSelect");
         });
 
         // NO → 关闭弹窗
