@@ -17,10 +17,11 @@ export class Preloader extends Scene {
     preload() {
         this.load.setPath("assets");
         // Add any future Detective Code assets here
+        this.load.image("logo", "logo.png");
     }
 
     create() {
-        // Go straight to Level1 — no main menu needed for now
-        this.scene.start("Level1");
+        // Go main menu(required)
+        this.scene.start("MainMenu");
     }
 }
