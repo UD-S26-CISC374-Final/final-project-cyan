@@ -851,6 +851,85 @@ export abstract class BaseLevel extends Scene {
         return this.terminalLines.join("\n");
     }
 
+    //dialog
+    public createBackButton() {
+        const { height } = this.scale;
+
+        const backButton = this.add
+            .text(20, height - 20, "← Menu", {
+                fontFamily: "Arial Black",
+                fontSize: 20,
+                color: "#111111",
+                backgroundColor: "#f5d742",
+                padding: { x: 12, y: 6 },
+            })
+            .setOrigin(0, 1)
+            .setInteractive({ useHandCursor: true })
+            .setDepth(9999);
+
+        backButton.on("pointerdown", () => {
+            this.showConfirmDialog();
+        });
+    }
+    public showConfirmDialog() {
+        if (this.children.getByName("confirm")) return;
+
+        const { width, height } = this.scale;
+
+        const overlay = this.add
+            .rectangle(0, 0, width, height, 0x000000, 0.6)
+            .setOrigin(0)
+            .setDepth(2000)
+            .setName("confirm");
+
+        const box = this.add
+            .rectangle(width / 2, height / 2, 400, 200, 0x222222)
+            .setStrokeStyle(2, 0xf5d742)
+            .setDepth(2001);
+
+        const text = this.add
+            .text(width / 2, height / 2 - 40, "Return to Level Select?", {
+                fontFamily: "Arial",
+                fontSize: 22,
+                color: "#ffffff",
+            })
+            .setOrigin(0.5)
+            .setDepth(2002);
+
+        const yesBtn = this.add
+            .text(width / 2 - 80, height / 2 + 40, "Yes", {
+                fontSize: 20,
+                color: "#111111",
+                backgroundColor: "#f5d742",
+                padding: { x: 15, y: 8 },
+            })
+            .setOrigin(0.5)
+            .setInteractive({ useHandCursor: true })
+            .setDepth(2002);
+
+        const noBtn = this.add
+            .text(width / 2 + 80, height / 2 + 40, "No", {
+                fontSize: 20,
+                color: "#ffffff",
+                backgroundColor: "#444444",
+                padding: { x: 15, y: 8 },
+            })
+            .setOrigin(0.5)
+            .setInteractive({ useHandCursor: true })
+            .setDepth(2002);
+
+        yesBtn.on("pointerdown", () => {
+            this.scene.start("LevelSelect");
+        });
+
+        noBtn.on("pointerdown", () => {
+            overlay.destroy();
+            box.destroy();
+            text.destroy();
+            yesBtn.destroy();
+            noBtn.destroy();
+        });
+    }
     // ── Scene change ──────────────────────────────────────────────────────────
     changeScene() {
         this.scene.start("GameOver");
