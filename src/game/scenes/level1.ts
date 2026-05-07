@@ -59,7 +59,7 @@ export class Level1 extends BaseLevel {
                         return (
                             "Authentication required.\n" +
                             "Call me with: two_factor(name)\n" +
-                            "  name — your agent codename"
+                            "name — your agent codename"
                         );
                     }
                     const name = String(args[0]);
@@ -75,12 +75,14 @@ export class Level1 extends BaseLevel {
                             "The terminal has been locked by the new robotic system.\n" +
                             "To regain access, you must verify your identity.\n" +
                             "\n" +
-                            "Step 1: Call two_factor(name) using your agent codename\n" +
-                            "        to receive your 4-digit PIN.\n" +
+                            "Step 1: Call two_factor(detective_name) using your agent codename\n" +
+                            "to receive your 4-digit PIN.\n" +
                             "Step 2: print() the PIN to submit it.\n" +
                             "\n" +
                             "Your codename is already loaded — check the variables above.\n" +
-                            "Tip: use help('two_factor') to learn more about that function."
+                            "Tip: You can put the function name into the argument of help() as a string \n" +
+                            "For example: help('function_name')\n" +
+                            "to learn more about how that function works.\n"
                         );
                     }
                     const funcName = String(args[0]);
@@ -88,10 +90,8 @@ export class Level1 extends BaseLevel {
                         two_factor:
                             "two_factor(name)\n" +
                             "Generates a two-factor authentication PIN.\n" +
-                            "  name : str — your agent codename\n" +
-                            "Returns a 4-digit PIN if the name is recognized.\n" +
-                            "\n" +
-                            "Example: two_factor(name)",
+                            "name : str — your agent codename\n" +
+                            "Returns a 4-digit PIN if the name is recognized.\n",
                         help:
                             "help(func_name?)\n" +
                             "With no arguments: shows the full case instructions.\n" +
