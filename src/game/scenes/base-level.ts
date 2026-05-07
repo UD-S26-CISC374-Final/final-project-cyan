@@ -100,6 +100,8 @@ export abstract class BaseLevel extends Scene {
     protected blackboardLabel!: GameObjects.Text;
     protected blackboardGraphics!: GameObjects.Graphics;
     protected blackboardRows: GameObjects.Text[] = [];
+    protected blackboardHeaderTexts: GameObjects.Text[] = [];
+    private blackboardRowKeys = new Set<string>();
     protected keyboard!: GameObjects.Rectangle;
     protected keyboardLabel!: GameObjects.Text;
     protected telephone!: GameObjects.Rectangle;
@@ -1054,6 +1056,13 @@ export abstract class BaseLevel extends Scene {
             this.BB_COL_TRACE + this.BB_COL_EVENT + this.BB_COL_DETAIL;
         const rowH = this.BB_ROW_H;
 
+        // Header text is also GameObject state. Destroy it before redrawing,
+        // otherwise clearTraceTable() leaves old header labels stacked on top.
+        for (const obj of this.blackboardHeaderTexts) {
+            obj.destroy();
+        }
+        this.blackboardHeaderTexts = [];
+
         g.clear();
 
         // Header background
@@ -1080,11 +1089,11 @@ export abstract class BaseLevel extends Scene {
             align: "center" as const,
         };
 
-        this.add
+        const stepHeader = this.add
             .text(x + this.BB_COL_TRACE / 2, y + rowH / 2, "Step", headerStyle)
             .setOrigin(0.5);
 
-        this.add
+        const eventHeader = this.add
             .text(
                 x + this.BB_COL_TRACE + this.BB_COL_EVENT / 2,
                 y + rowH / 2,
@@ -1093,7 +1102,7 @@ export abstract class BaseLevel extends Scene {
             )
             .setOrigin(0.5);
 
-        this.add
+        const detailHeader = this.add
             .text(
                 x +
                     this.BB_COL_TRACE +
@@ -1104,6 +1113,69 @@ export abstract class BaseLevel extends Scene {
                 headerStyle,
             )
             .setOrigin(0.5);
+
+        this.blackboardHeaderTexts.push(stepHeader, eventHeader, detailHeader);
+    }
+
+    private normalizeTraceCellText(value: string): string {
+        return value.replace(/\s+/g, " ").trim();
+    }
+
+    private fitTraceCellText(value: string, colWidth: number): string {
+        const fontSize = 11;
+        const lineSpacing = 1;
+        const horizontalPadding = 8;
+        const verticalPadding = 8;
+        const usableWidth = colWidth - horizontalPadding;
+        const maxLines = Math.max(
+            1,
+            Math.floor(
+                (this.BB_ROW_H - verticalPadding) / (fontSize + lineSpacing),
+            ),
+        );
+
+        // Courier New is monospace; this approximation keeps text inside the
+        // fixed-height row without relying on runtime text measurement.
+        const charsPerLine = Math.max(
+            4,
+            Math.floor(usableWidth / (fontSize * 0.62)),
+        );
+        const words = this.normalizeTraceCellText(value).split(" ");
+        const lines: string[] = [];
+        let current = "";
+
+        for (const word of words) {
+            if (word.length > charsPerLine) {
+                if (current) {
+                    lines.push(current);
+                    current = "";
+                }
+                for (let i = 0; i < word.length; i += charsPerLine) {
+                    lines.push(word.slice(i, i + charsPerLine));
+                }
+                continue;
+            }
+
+            const next = current ? `${current} ${word}` : word;
+            if (next.length > charsPerLine) {
+                lines.push(current);
+                current = word;
+            } else {
+                current = next;
+            }
+        }
+
+        if (current) lines.push(current);
+
+        if (lines.length <= maxLines) return lines.join("\n");
+
+        const fitted = lines.slice(0, maxLines);
+        const last = fitted[fitted.length - 1];
+        fitted[fitted.length - 1] =
+            last.length >= charsPerLine ?
+                `${last.slice(0, charsPerLine - 1)}…`
+            :   `${last}…`;
+        return fitted.join("\n");
     }
 
     protected addTraceRow(step: number, event: string, details: string) {
@@ -1115,8 +1187,17 @@ export abstract class BaseLevel extends Scene {
             (this.BB_H - (this.BB_TABLE_Y - this.BB_Y) - rowH - 8) / rowH,
         );
 
+        const eventForKey = this.normalizeTraceCellText(event);
+        const detailsForKey = this.normalizeTraceCellText(details);
+        const rowKey = `${eventForKey}::${detailsForKey}`;
+
+        // Prevent repeated rows when the same telephone call is made again.
+        if (this.blackboardRowKeys.has(rowKey)) return;
+
         const rowIndex = Math.floor(this.blackboardRows.length / 3);
         if (rowIndex >= maxRows) return;
+
+        this.blackboardRowKeys.add(rowKey);
 
         const rowY = this.BB_TABLE_Y + rowH + rowIndex * rowH;
         const bg = rowIndex % 2 === 0 ? 0x2d5a1b : 0x244d16;
@@ -1145,6 +1226,7 @@ export abstract class BaseLevel extends Scene {
             fontFamily: "Courier New",
             fontSize: "11px",
             color: "#d0f0d0",
+            lineSpacing: 1,
         };
 
         const stepText = this.add
@@ -1155,18 +1237,26 @@ export abstract class BaseLevel extends Scene {
             .setOrigin(0.5);
 
         const eventText = this.add
-            .text(x + this.BB_COL_TRACE + 4, rowY + 4, event, {
-                ...cellStyle,
-                wordWrap: { width: this.BB_COL_EVENT - 8 },
-            })
+            .text(
+                x + this.BB_COL_TRACE + 4,
+                rowY + 4,
+                this.fitTraceCellText(event, this.BB_COL_EVENT),
+                {
+                    ...cellStyle,
+                    wordWrap: { width: this.BB_COL_EVENT - 8 },
+                },
+            )
             .setOrigin(0, 0);
 
         const detailText = this.add
             .text(
                 x + this.BB_COL_TRACE + this.BB_COL_EVENT + 4,
                 rowY + 4,
-                details,
-                { ...cellStyle, wordWrap: { width: this.BB_COL_DETAIL - 8 } },
+                this.fitTraceCellText(details, this.BB_COL_DETAIL),
+                {
+                    ...cellStyle,
+                    wordWrap: { width: this.BB_COL_DETAIL - 8 },
+                },
             )
             .setOrigin(0, 0);
 
@@ -1178,6 +1268,7 @@ export abstract class BaseLevel extends Scene {
             obj.destroy();
         }
         this.blackboardRows = [];
+        this.blackboardRowKeys.clear();
         this.drawTraceTableHeader();
     }
 
