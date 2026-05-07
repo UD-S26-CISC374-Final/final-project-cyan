@@ -30,7 +30,7 @@ export abstract class BaseLevel extends Scene {
     protected readonly SB_Y = 10;
     protected readonly SB_W = 500;
     protected readonly SB_H = 540;
-    protected readonly TRANSCRIPT_H = 240;
+    protected readonly TRANSCRIPT_H = 340;
     protected readonly TERMINAL_Y = this.SB_Y + this.TRANSCRIPT_H + 4;
     protected readonly TERMINAL_H = this.SB_H - this.TRANSCRIPT_H - 4;
 
@@ -52,11 +52,11 @@ export abstract class BaseLevel extends Scene {
     protected readonly PHONE_CENTER_Y = this.ITEM_Y + this.ITEM_H / 2;
 
     // ── Word bubble ───────────────────────────────────────────────────────────
-    protected readonly BUBBLE_W = 380;
-    protected readonly BUBBLE_H = 220;
+    protected readonly BUBBLE_W = 460;
+    protected readonly BUBBLE_H = 320;
     protected readonly BUBBLE_TAIL_H = 40;
-    protected readonly BUBBLE_DEFAULT_X = 520;
-    protected readonly BUBBLE_Y = 290;
+    protected readonly BUBBLE_DEFAULT_X = 500;
+    protected readonly BUBBLE_Y = 180;
 
     // ── Report panel ──────────────────────────────────────────────────────────
     protected readonly REPORT_W = 340;
@@ -207,15 +207,15 @@ export abstract class BaseLevel extends Scene {
                 this.SB_Y + this.TRANSCRIPT_H / 2,
                 this.SB_W - 8,
                 this.TRANSCRIPT_H - 4,
-                0x0d1b2a,
+                0xffffff,
             )
-            .setStrokeStyle(2, 0x2a5c8a);
+            .setStrokeStyle(2, 0xaaaaaa);
 
         this.transcriptText = this.add
             .text(this.SB_X + 12, this.SB_Y + 10, transcript, {
                 fontFamily: "Courier New",
                 fontSize: "12px",
-                color: "#4a9eff",
+                color: "#111111",
                 wordWrap: { width: this.SB_W - 28 },
             })
             .setOrigin(0, 0);
@@ -541,40 +541,84 @@ export abstract class BaseLevel extends Scene {
         ]);
 
         this.input.keyboard.on("keydown", (event: KeyboardEvent) => {
+            // ── Device shortcuts (work even when terminal is not focused) ─────
+            // Shift+Enter → focus terminal
+            // Ctrl+Enter  → activate telephone
+            // Alt+Enter   → activate printer
+            if (event.key === "Enter" && event.shiftKey) {
+                event.preventDefault();
+                this.activateTerminal();
+                return;
+            }
+            if (event.key === "Enter" && event.ctrlKey) {
+                event.preventDefault();
+                this.activateTelephone();
+                return;
+            }
+            if (event.key === "Enter" && event.altKey) {
+                event.preventDefault();
+                this.activatePrinter();
+                return;
+            }
+
             if (!this.terminalActive) return;
             event.preventDefault();
 
             const key = event.key;
+            const ctrl = event.ctrlKey || event.metaKey;
             const line = this.terminalLines[this.cursorLine];
+            const lastLine = this.terminalLines.length - 1;
 
-            // Movement keys always work, even after solving
+            // ── Movement keys (always work, even after solving) ───────────────
             if (key === "ArrowUp") {
-                if (this.cursorLine > 0) {
+                if (ctrl) {
+                    // Ctrl+Up → jump to very beginning of first line
+                    this.cursorLine = 0;
+                    this.cursorCol = 0;
+                } else if (this.cursorLine > 0) {
                     this.cursorLine--;
                     this.cursorCol = Math.min(
                         this.cursorCol,
                         this.terminalLines[this.cursorLine].length,
                     );
+                } else {
+                    // Already on first line → go to beginning of it
+                    this.cursorCol = 0;
                 }
             } else if (key === "ArrowDown") {
-                if (this.cursorLine < this.terminalLines.length - 1) {
+                if (ctrl) {
+                    // Ctrl+Down → jump to very end of last line
+                    this.cursorLine = lastLine;
+                    this.cursorCol = this.terminalLines[lastLine].length;
+                } else if (this.cursorLine < lastLine) {
                     this.cursorLine++;
                     this.cursorCol = Math.min(
                         this.cursorCol,
                         this.terminalLines[this.cursorLine].length,
                     );
+                } else {
+                    // Already on last line → go to end of it
+                    this.cursorCol = this.terminalLines[lastLine].length;
                 }
             } else if (key === "ArrowLeft") {
-                if (this.cursorCol > 0) {
+                if (ctrl) {
+                    // Ctrl+Left → jump to start of previous word
+                    this.cursorCol = this.findWordLeft(line, this.cursorCol);
+                } else if (this.cursorCol > 0) {
                     this.cursorCol--;
                 } else if (this.cursorLine > 0) {
+                    // Wrap up to end of previous line
                     this.cursorLine--;
                     this.cursorCol = this.terminalLines[this.cursorLine].length;
                 }
             } else if (key === "ArrowRight") {
-                if (this.cursorCol < line.length) {
+                if (ctrl) {
+                    // Ctrl+Right → jump to end of next word
+                    this.cursorCol = this.findWordRight(line, this.cursorCol);
+                } else if (this.cursorCol < line.length) {
                     this.cursorCol++;
-                } else if (this.cursorLine < this.terminalLines.length - 1) {
+                } else if (this.cursorLine < lastLine) {
+                    // Wrap down to start of next line
                     this.cursorLine++;
                     this.cursorCol = 0;
                 }
@@ -583,7 +627,7 @@ export abstract class BaseLevel extends Scene {
             } else if (key === "End") {
                 this.cursorCol = this.terminalLines[this.cursorLine].length;
 
-                // Editing keys are locked after solving
+                // ── Editing keys (locked after solving) ───────────────────────────
             } else if (!this.terminalSolved) {
                 if (key === "Backspace") {
                     if (this.cursorCol > 0) {
@@ -605,10 +649,7 @@ export abstract class BaseLevel extends Scene {
                         this.terminalLines[this.cursorLine] =
                             line.slice(0, this.cursorCol) +
                             line.slice(this.cursorCol + 1);
-                    } else if (
-                        this.cursorLine <
-                        this.terminalLines.length - 1
-                    ) {
+                    } else if (this.cursorLine < lastLine) {
                         this.terminalLines[this.cursorLine] =
                             line + this.terminalLines[this.cursorLine + 1];
                         this.terminalLines.splice(this.cursorLine + 1, 1);
@@ -620,7 +661,7 @@ export abstract class BaseLevel extends Scene {
                     this.terminalLines.splice(this.cursorLine + 1, 0, after);
                     this.cursorLine++;
                     this.cursorCol = 0;
-                } else if (key.length === 1) {
+                } else if (key.length === 1 && !ctrl) {
                     this.terminalLines[this.cursorLine] =
                         line.slice(0, this.cursorCol) +
                         key +
@@ -650,6 +691,29 @@ export abstract class BaseLevel extends Scene {
     }
 
     // ── Interactions ──────────────────────────────────────────────────────────
+
+    /**
+     * Ctrl+Left: finds the start of the word to the left of the cursor.
+     * Skips any spaces, then skips back through word characters.
+     */
+    private findWordLeft(line: string, col: number): number {
+        let i = col;
+        while (i > 0 && line[i - 1] === " ") i--;
+        while (i > 0 && line[i - 1] !== " ") i--;
+        return i;
+    }
+
+    /**
+     * Ctrl+Right: finds the end of the word to the right of the cursor.
+     * Skips any spaces, then skips forward through word characters.
+     */
+    private findWordRight(line: string, col: number): number {
+        let i = col;
+        while (i < line.length && line[i] === " ") i++;
+        while (i < line.length && line[i] !== " ") i++;
+        return i;
+    }
+
     private setupInteractions() {
         this.terminalPanel.setInteractive({ useHandCursor: true });
         this.terminalPanel.on("pointerdown", () => this.activateTerminal());
@@ -763,37 +827,122 @@ export abstract class BaseLevel extends Scene {
         this.executor.loadTranscript(this.levelTranscript);
         this.executor.reset();
 
-        // Run the entire terminal content
-        this.executor.runAll(this.getTerminalContent());
-
-        // Display the print() output in the report panel
+        // Run the entire terminal content and collect diagnostics
+        const results = this.executor.runAll(this.getTerminalContent());
         const output = this.executor.getPrintOutput();
-        this.setReportText(output.length > 0 ? output : "(no print output)");
 
-        // Show appropriate hint depending on the output
-        if (output.length === 0) {
-            this.showHintBox(
-                "Your report is empty! Use print() to submit your findings. " +
-                    "Example: print(two_factor(name))",
-                false,
-            );
-        } else if (output.trim() === this.levelCorrectAnswer.trim()) {
-            this.showHintBox(
-                "This report looks correct! Press the green arrow when you " +
-                    "are ready to move onto the next mystery.",
-                true,
-            );
+        this.setReportText(output.length > 0 ? output : "(no print output)");
+        this.showHintBox(
+            this.pickHint(results, output),
+            this.checkAnswer(output, this.levelCorrectAnswer),
+        );
+        if (this.checkAnswer(output, this.levelCorrectAnswer)) {
             this.terminalSolved = true;
-        } else {
-            this.showHintBox(
-                "This report doesn't look right. Try calling help() to review " +
-                    "the case details, or use the telephone to investigate further.",
-                false,
-            );
         }
 
         this.reportContainer.x = this.REPORT_DEFAULT_X;
         this.reportContainer.setVisible(true);
+    }
+
+    /**
+     * Picks the highest-priority hint message based on the player's output
+     * and the diagnostics collected by the executor.
+     */
+    private pickHint(
+        results: import("../python-executor").LineResult[],
+        output: string,
+    ): string {
+        // ── Priority 10: Correct answer ───────────────────────────────────────
+        if (this.checkAnswer(output, this.levelCorrectAnswer)) {
+            return (
+                "This report looks correct! Press the green arrow when you " +
+                "are ready to move onto the next mystery."
+            );
+        }
+
+        // ── Priority 9: Correct value computed but not printed ────────────────
+        const correctLines = this.levelCorrectAnswer
+            .split("\n")
+            .map((l) => l.trim().toLowerCase())
+            .filter((l) => l.length > 0);
+
+        const callOutputs = results
+            .filter((r) => r.type === "call")
+            .map((r) => r.output.trim().toLowerCase());
+
+        const hasUnprintedAnswer = correctLines.every((req) =>
+            callOutputs.some((o) => o === req),
+        );
+        if (hasUnprintedAnswer) {
+            return (
+                "You have the right answer! You just need to print it. " +
+                "Wrap your function call inside print() — " +
+                "for example: print(your_function(args))"
+            );
+        }
+
+        // ── Priority 8: Terminal is overcrowded ───────────────────────────────
+        const occupiedLines = this.terminalLines.filter((l) => {
+            const t = l.trim();
+            return t.length > 0 && !t.startsWith("#");
+        });
+        if (occupiedLines.length >= 6) {
+            return (
+                "Your terminal is getting crowded! Try deleting function calls " +
+                "or print() statements you no longer need to keep things clear."
+            );
+        }
+
+        // ── Priority 4: Undefined variable used inside print() ────────────────
+        const printResults = results.filter((r) => r.type === "print");
+        const errorResults = results.filter((r) => r.type === "error");
+
+        const undefinedInPrint = errorResults.some((r) =>
+            r.output.includes("Cannot resolve:"),
+        );
+        if (undefinedInPrint) {
+            const match = errorResults.find((r) =>
+                r.output.includes("Cannot resolve:"),
+            );
+            const varName =
+                match ?
+                    match.output.replace("Cannot resolve:", "").trim()
+                :   "a variable";
+            return (
+                `"${varName}" is being treated as a variable inside your ` +
+                `print() statement, but it hasn't been defined. ` +
+                `If you meant it as text, wrap it in quotes: print("${varName}")`
+            );
+        }
+
+        // ── Priority 3: print() ran but result is wrong ───────────────────────
+        if (printResults.length > 0) {
+            return (
+                "It doesn't seem like this report has the correct information. " +
+                "Double check your work — try using the telephone to verify " +
+                "what your function calls are returning."
+            );
+        }
+
+        // ── Priority 2: Function called with wrong number of parameters ────────
+        const wrongArgCount = errorResults.some(
+            (r) =>
+                r.output.includes("Cannot parse:") ||
+                r.output.includes("Unknown function:"),
+        );
+        if (wrongArgCount) {
+            return (
+                "One of your function calls doesn't look right. " +
+                "Try calling help('function_name') to see how to use it."
+            );
+        }
+
+        // ── Priority 1: No print output at all ────────────────────────────────
+        return (
+            "Your report is empty! Start by calling help() to get instructions. " +
+            "Move your text cursor over the word 'help' in the terminal, " +
+            "then click the telephone to make the call."
+        );
     }
 
     protected closeTerminal() {
@@ -851,7 +1000,27 @@ export abstract class BaseLevel extends Scene {
         return this.terminalLines.join("\n");
     }
 
-    //dialog
+    /**
+     * Lenient answer checker.
+     * Every line in correctAnswer must appear somewhere in the player's output.
+     * Extra lines in the player's output are ignored.
+     * Comparison is case-insensitive and trims whitespace.
+     */
+    private checkAnswer(playerOutput: string, correctAnswer: string): boolean {
+        const playerLines = playerOutput
+            .split("\n")
+            .map((l) => l.trim().toLowerCase())
+            .filter((l) => l.length > 0);
+
+        const requiredLines = correctAnswer
+            .split("\n")
+            .map((l) => l.trim().toLowerCase())
+            .filter((l) => l.length > 0);
+
+        return requiredLines.every((required) =>
+            playerLines.some((player) => player === required),
+        );
+    }
     public createBackButton() {
         const { height } = this.scale;
 
