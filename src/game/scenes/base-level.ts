@@ -40,6 +40,14 @@ export abstract class BaseLevel extends Scene {
     protected readonly BB_W = 494;
     protected readonly BB_H = 540;
 
+    // Blackboard table layout
+    protected readonly BB_TABLE_X = 528;
+    protected readonly BB_TABLE_Y = 50;
+    protected readonly BB_COL_TRACE = 50;
+    protected readonly BB_COL_EVENT = 160;
+    protected readonly BB_COL_DETAIL = 200;
+    protected readonly BB_ROW_H = 36;
+
     // ── Desk items ────────────────────────────────────────────────────────────
     protected readonly ITEM_Y = this.DESK_Y + 20;
     protected readonly ITEM_H = 120;
@@ -90,6 +98,8 @@ export abstract class BaseLevel extends Scene {
     protected terminalText!: GameObjects.Text;
     protected blackboard!: GameObjects.Rectangle;
     protected blackboardLabel!: GameObjects.Text;
+    protected blackboardGraphics!: GameObjects.Graphics;
+    protected blackboardRows: GameObjects.Text[] = [];
     protected keyboard!: GameObjects.Rectangle;
     protected keyboardLabel!: GameObjects.Text;
     protected telephone!: GameObjects.Rectangle;
@@ -264,6 +274,9 @@ export abstract class BaseLevel extends Scene {
                 },
             )
             .setOrigin(0.5, 0);
+
+        this.blackboardGraphics = this.add.graphics();
+        this.drawTraceTableHeader();
 
         const y = this.ITEM_Y;
         const h = this.ITEM_H;
@@ -807,6 +820,14 @@ export abstract class BaseLevel extends Scene {
             message = `Error calling ${span.name}():\n\n${result.output}`;
         } else {
             message = `${span.name}() says:\n\n${result.output}`;
+
+            // Add a row to the blackboard trace table
+            const traceLog = this.executor.getTraceLog();
+            const step = traceLog.length;
+            const argStr = result.args.map((a) => JSON.stringify(a)).join(", ");
+            const eventStr = `Call ${span.name}(${argStr})`;
+            const detailStr = `returns "${result.output}"`;
+            this.addTraceRow(step, eventStr, detailStr);
         }
 
         this.showBubble(message);
@@ -826,6 +847,7 @@ export abstract class BaseLevel extends Scene {
         this.executor.resetPlayerVariables();
         this.executor.loadTranscript(this.levelTranscript);
         this.executor.reset();
+        this.clearTraceTable();
 
         // Run the entire terminal content and collect diagnostics
         const results = this.executor.runAll(this.getTerminalContent());
@@ -1021,6 +1043,144 @@ export abstract class BaseLevel extends Scene {
             playerLines.some((player) => player === required),
         );
     }
+
+    // ── Blackboard trace table ────────────────────────────────────────────────
+
+    private drawTraceTableHeader() {
+        const g = this.blackboardGraphics;
+        const x = this.BB_TABLE_X;
+        const y = this.BB_TABLE_Y;
+        const totalW =
+            this.BB_COL_TRACE + this.BB_COL_EVENT + this.BB_COL_DETAIL;
+        const rowH = this.BB_ROW_H;
+
+        g.clear();
+
+        // Header background
+        g.fillStyle(0x1a3a0f, 1);
+        g.fillRect(x, y, totalW, rowH);
+
+        // Outer border
+        g.lineStyle(2, 0xaaddaa, 1);
+        g.strokeRect(x, y, totalW, rowH);
+
+        // Column dividers
+        g.lineStyle(1, 0xaaddaa, 1);
+        g.beginPath();
+        g.moveTo(x + this.BB_COL_TRACE, y);
+        g.lineTo(x + this.BB_COL_TRACE, y + rowH);
+        g.moveTo(x + this.BB_COL_TRACE + this.BB_COL_EVENT, y);
+        g.lineTo(x + this.BB_COL_TRACE + this.BB_COL_EVENT, y + rowH);
+        g.strokePath();
+
+        const headerStyle = {
+            fontFamily: "Courier New",
+            fontSize: "12px",
+            color: "#e8f5e1",
+            align: "center" as const,
+        };
+
+        this.add
+            .text(x + this.BB_COL_TRACE / 2, y + rowH / 2, "Step", headerStyle)
+            .setOrigin(0.5);
+
+        this.add
+            .text(
+                x + this.BB_COL_TRACE + this.BB_COL_EVENT / 2,
+                y + rowH / 2,
+                "Event",
+                headerStyle,
+            )
+            .setOrigin(0.5);
+
+        this.add
+            .text(
+                x +
+                    this.BB_COL_TRACE +
+                    this.BB_COL_EVENT +
+                    this.BB_COL_DETAIL / 2,
+                y + rowH / 2,
+                "Details",
+                headerStyle,
+            )
+            .setOrigin(0.5);
+    }
+
+    protected addTraceRow(step: number, event: string, details: string) {
+        const x = this.BB_TABLE_X;
+        const rowH = this.BB_ROW_H;
+        const totalW =
+            this.BB_COL_TRACE + this.BB_COL_EVENT + this.BB_COL_DETAIL;
+        const maxRows = Math.floor(
+            (this.BB_H - (this.BB_TABLE_Y - this.BB_Y) - rowH - 8) / rowH,
+        );
+
+        const rowIndex = Math.floor(this.blackboardRows.length / 3);
+        if (rowIndex >= maxRows) return;
+
+        const rowY = this.BB_TABLE_Y + rowH + rowIndex * rowH;
+        const bg = rowIndex % 2 === 0 ? 0x2d5a1b : 0x244d16;
+
+        this.blackboardGraphics.fillStyle(bg, 1);
+        this.blackboardGraphics.fillRect(x, rowY, totalW, rowH);
+
+        this.blackboardGraphics.lineStyle(1, 0x6aaa6a, 1);
+        this.blackboardGraphics.strokeRect(x, rowY, totalW, rowH);
+
+        this.blackboardGraphics.lineStyle(1, 0x6aaa6a, 1);
+        this.blackboardGraphics.beginPath();
+        this.blackboardGraphics.moveTo(x + this.BB_COL_TRACE, rowY);
+        this.blackboardGraphics.lineTo(x + this.BB_COL_TRACE, rowY + rowH);
+        this.blackboardGraphics.moveTo(
+            x + this.BB_COL_TRACE + this.BB_COL_EVENT,
+            rowY,
+        );
+        this.blackboardGraphics.lineTo(
+            x + this.BB_COL_TRACE + this.BB_COL_EVENT,
+            rowY + rowH,
+        );
+        this.blackboardGraphics.strokePath();
+
+        const cellStyle = {
+            fontFamily: "Courier New",
+            fontSize: "11px",
+            color: "#d0f0d0",
+        };
+
+        const stepText = this.add
+            .text(x + this.BB_COL_TRACE / 2, rowY + rowH / 2, String(step), {
+                ...cellStyle,
+                align: "center" as const,
+            })
+            .setOrigin(0.5);
+
+        const eventText = this.add
+            .text(x + this.BB_COL_TRACE + 4, rowY + 4, event, {
+                ...cellStyle,
+                wordWrap: { width: this.BB_COL_EVENT - 8 },
+            })
+            .setOrigin(0, 0);
+
+        const detailText = this.add
+            .text(
+                x + this.BB_COL_TRACE + this.BB_COL_EVENT + 4,
+                rowY + 4,
+                details,
+                { ...cellStyle, wordWrap: { width: this.BB_COL_DETAIL - 8 } },
+            )
+            .setOrigin(0, 0);
+
+        this.blackboardRows.push(stepText, eventText, detailText);
+    }
+
+    protected clearTraceTable() {
+        for (const obj of this.blackboardRows) {
+            obj.destroy();
+        }
+        this.blackboardRows = [];
+        this.drawTraceTableHeader();
+    }
+
     public createBackButton() {
         const { height } = this.scale;
 
