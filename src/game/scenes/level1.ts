@@ -32,18 +32,24 @@ export class Level1 extends BaseLevel {
     } {
         return {
             transcript: [
-                "# SYSTEM LOGIN REQUIRED",
+                "# TUTORIAL: SYSTEM LOGIN",
                 "# ----------------------",
                 "# The terminal is locked. You need a PIN to log in.",
                 "# Use two_factor() to receive your login PIN.",
-                "# Print the result to submit your login attempt.",
-                "#",
+                "",
                 "# Run help() for more information.",
-                "#",
+                "# Move your text cursor over the word 'help' in the terminal",
+                "# then click the telephone to make a function phone call.",
+                "",
+                "# The line below is a variable that can be used in a function call",
                 'name = "Code"',
+                "",
+                "# Print your 4-digit PIN below:",
+                'print("Enter the 4-digit PIN: ")',
+                "",
             ].join("\n"),
 
-            correctAnswer: "PIN: 7429",
+            correctAnswer: "7429",
 
             initialTerminalLines: ["help()"],
 
@@ -57,7 +63,7 @@ export class Level1 extends BaseLevel {
                         );
                     }
                     const name = String(args[0]);
-                    if (name === "Code") return "PIN: 7429";
+                    if (name === "Code") return "7429";
                     return `Unknown agent: ${name}. Access denied.`;
                 },
 
@@ -68,11 +74,13 @@ export class Level1 extends BaseLevel {
                             "------------\n" +
                             "The terminal has been locked by the new robotic system.\n" +
                             "To regain access, you must verify your identity.\n" +
-                            "Call two_factor(name) using your agent codename,\n" +
-                            "then print() the result to submit your login PIN.\n" +
                             "\n" +
-                            "Your codename has already been loaded into the system.\n" +
-                            "Hint: check the initialized variables above."
+                            "Step 1: Call two_factor(name) using your agent codename\n" +
+                            "        to receive your 4-digit PIN.\n" +
+                            "Step 2: print() the PIN to submit it.\n" +
+                            "\n" +
+                            "Your codename is already loaded — check the variables above.\n" +
+                            "Tip: use help('two_factor') to learn more about that function."
                         );
                     }
                     const funcName = String(args[0]);
@@ -81,11 +89,15 @@ export class Level1 extends BaseLevel {
                             "two_factor(name)\n" +
                             "Generates a two-factor authentication PIN.\n" +
                             "  name : str — your agent codename\n" +
-                            "Returns a PIN string if the name is recognized.",
+                            "Returns a 4-digit PIN if the name is recognized.\n" +
+                            "\n" +
+                            "Example: two_factor(name)",
                         help:
                             "help(func_name?)\n" +
-                            "With no arguments: shows the full case transcript.\n" +
-                            "With a function name: describes that function.",
+                            "With no arguments: shows the full case instructions.\n" +
+                            "With a function name: describes that function.\n" +
+                            "\n" +
+                            "Example: help('two_factor')",
                     };
                     return (
                         descriptions[funcName] ??
