@@ -80,6 +80,7 @@ export abstract class BaseLevel extends Scene {
     protected terminalLines: string[] = [""];
     protected cursorLine = 0;
     protected cursorCol = 0;
+    private terminalTopLine = 0;
     protected terminalActive = false;
 
     // ── Python executor ───────────────────────────────────────────────────────
@@ -691,9 +692,49 @@ export abstract class BaseLevel extends Scene {
         });
     }
 
+    private getTerminalVisibleLineCount(): number {
+        const verticalPadding = 20;
+        const fontSize = 14;
+        const lineSpacing = 6;
+        const lineHeight = fontSize + lineSpacing;
+        return Math.max(
+            1,
+            Math.floor((this.TERMINAL_H - verticalPadding) / lineHeight),
+        );
+    }
+
+    private clampTerminalViewport() {
+        const visibleLineCount = this.getTerminalVisibleLineCount();
+        const maxTopLine = Math.max(
+            0,
+            this.terminalLines.length - visibleLineCount,
+        );
+
+        if (this.cursorLine < this.terminalTopLine) {
+            this.terminalTopLine = this.cursorLine;
+        } else if (this.cursorLine >= this.terminalTopLine + visibleLineCount) {
+            this.terminalTopLine = this.cursorLine - visibleLineCount + 1;
+        }
+
+        this.terminalTopLine = Phaser.Math.Clamp(
+            this.terminalTopLine,
+            0,
+            maxTopLine,
+        );
+    }
+
     protected refreshTerminalDisplay() {
-        const display = this.terminalLines.map((line, i) => {
-            if (i === this.cursorLine && this.terminalActive) {
+        this.clampTerminalViewport();
+
+        const visibleLineCount = this.getTerminalVisibleLineCount();
+        const visibleLines = this.terminalLines.slice(
+            this.terminalTopLine,
+            this.terminalTopLine + visibleLineCount,
+        );
+
+        const display = visibleLines.map((line, visibleIndex) => {
+            const lineIndex = this.terminalTopLine + visibleIndex;
+            if (lineIndex === this.cursorLine && this.terminalActive) {
                 const before = line.slice(0, this.cursorCol);
                 const atCursor = line[this.cursorCol] ?? "";
                 const after = line.slice(this.cursorCol + 1);
@@ -702,6 +743,7 @@ export abstract class BaseLevel extends Scene {
             }
             return line;
         });
+
         this.terminalText.setText(display.join("\n"));
     }
 

@@ -1,9 +1,9 @@
 {
-    "name": "final-project",
-    "version": "5.0.0",
+    "name": "Detective Code",
+    "version": "1.0.0",
     "type": "module",
-    "description": "CISC374 Project",
-    "homepage": "https://github.com/UD-S26-CISC374/final-project-template#readme",
+    "description": "CISC374 Final Project",
+    "homepage": "https://ud-s26-cisc374-final.github.io/final-project-cyan/",
     "scripts": {
         "dev": "vite --config vite/config.dev.mjs",
         "build": "tsc -b && vite build --config vite/config.prod.mjs",
@@ -21,16 +21,17 @@
         "Phaser3",
         "html5 game",
         "TypeScript",
-        "webpack",
-        "starter"
+        "Python",
+        "Detective Code",
+        "Puzzle"
     ],
     "author": {
-        "name": "Austin Cory Bart",
-        "url": "https://github.com/acbart"
+        "name": "CISC374 cyan group",
+        "url": "https://github.com/UD-S26-CISC374-Final/"
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/UD-S26-CISC374/final-project-template.git"
+        "url": "https://github.com/UD-S26-CISC374-Final/final-project-cyan.git"
     },
     "license": "MIT",
     "dependencies": {
