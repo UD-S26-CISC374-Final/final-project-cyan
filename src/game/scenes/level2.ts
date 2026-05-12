@@ -41,48 +41,71 @@ export class Level2 extends BaseLevel {
             functions: {
                 inspect: (...args: (string | number | boolean)[]) => {
                     if (args.length === 0) {
-                        return "Inspect what? Try: inspect(clue)";
+                        return {
+                            dialogue: "Inspect what? Try: inspect(clue)",
+                            value: "",
+                        };
                     }
 
                     const item = String(args[0]);
 
                     if (item === "matchbook") {
-                        return "silver-key";
+                        return {
+                            dialogue:
+                                "You flip open the matchbook. Scrawled inside\n" +
+                                "the cover is a single word: 'silver-key'.",
+                            value: "silver-key",
+                        };
                     }
 
-                    return `Nothing useful found on ${item}.`;
+                    return {
+                        dialogue: `Nothing useful found on ${item}.`,
+                        value: "",
+                    };
                 },
 
                 decrypt: (...args: (string | number | boolean)[]) => {
                     if (args.length < 2) {
-                        return (
-                            "Missing information.\n" +
-                            "Call me with: decrypt(code, key)"
-                        );
+                        return {
+                            dialogue:
+                                "Missing information.\n" +
+                                "Call me with: decrypt(code, key)",
+                            value: "",
+                        };
                     }
 
                     const code = String(args[0]);
                     const key = String(args[1]);
 
                     if (code === "XJ-91" && key === "silver-key") {
-                        return "MEET AT MIDNIGHT";
+                        return {
+                            dialogue:
+                                "Decryption successful.\n" +
+                                "The message reads: MEET AT MIDNIGHT",
+                            value: "MEET AT MIDNIGHT",
+                        };
                     }
 
-                    return "Decryption failed. Wrong code or key.";
+                    return {
+                        dialogue: "Decryption failed. Wrong code or key.",
+                        value: "",
+                    };
                 },
 
                 help: (...args: (string | number | boolean)[]) => {
                     if (args.length === 0) {
-                        return (
-                            "ENCRYPTED MESSAGE\n" +
-                            "-----------------\n" +
-                            "The encrypted file needs both a code and a key.\n" +
-                            "First inspect the clue to find the key.\n" +
-                            "Then use decrypt(code, key).\n" +
-                            "Finally print() the decrypted message.\n" +
-                            "\n" +
-                            "Hint: try inspect(clue)."
-                        );
+                        return {
+                            dialogue:
+                                "ENCRYPTED MESSAGE\n" +
+                                "-----------------\n" +
+                                "The encrypted file needs both a code and a key.\n" +
+                                "First inspect the clue to find the key.\n" +
+                                "Then use decrypt(code, key).\n" +
+                                "Finally print() the decrypted message.\n" +
+                                "\n" +
+                                "Hint: try inspect(clue).",
+                            value: "",
+                        };
                     }
 
                     const funcName = String(args[0]);
@@ -102,10 +125,10 @@ export class Level2 extends BaseLevel {
                             "With a function name: describes that function.",
                     };
 
-                    return (
+                    const desc =
                         descriptions[funcName] ??
-                        `No information found for '${funcName}'.`
-                    );
+                        `No information found for '${funcName}'.`;
+                    return { dialogue: desc, value: "" };
                 },
             },
         };
