@@ -27,7 +27,7 @@ Read the puzzle description and inspect the Python code shown in the workspace. 
 
 # Gameplay Video
 
-[Watch the gameplay video](./1.mp4)
+[Watch the gameplay video](https://drive.google.com/file/d/1B_LHi6ybrunRxGUeLxA8mPGQFXAfwgoW/view)
 
 # Educational Game Design Document
 
@@ -35,4 +35,4 @@ Link to our [egdd](./docs/egdd.md)
 
 # Credits
 
-TEXT GOES HERE
+Chatgpt image2
