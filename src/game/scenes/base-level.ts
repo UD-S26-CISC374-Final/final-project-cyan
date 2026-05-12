@@ -43,9 +43,9 @@ export abstract class BaseLevel extends Scene {
     // Blackboard table layout
     protected readonly BB_TABLE_X = 528;
     protected readonly BB_TABLE_Y = 50;
-    protected readonly BB_COL_TRACE = 50;
-    protected readonly BB_COL_EVENT = 160;
-    protected readonly BB_COL_DETAIL = 200;
+    protected readonly BB_COL_TRACE = 44;
+    protected readonly BB_COL_EVENT = 148;
+    protected readonly BB_COL_DETAIL = 216;
     protected readonly BB_ROW_H = 36;
 
     // ── Desk items ────────────────────────────────────────────────────────────
@@ -101,7 +101,6 @@ export abstract class BaseLevel extends Scene {
     protected blackboardGraphics!: GameObjects.Graphics;
     protected blackboardRows: GameObjects.Text[] = [];
     protected blackboardHeaderTexts: GameObjects.Text[] = [];
-    private blackboardRowKeys = new Set<string>();
     protected keyboard!: GameObjects.Rectangle;
     protected keyboardLabel!: GameObjects.Text;
     protected telephone!: GameObjects.Rectangle;
@@ -152,6 +151,14 @@ export abstract class BaseLevel extends Scene {
     // ── Lifecycle ─────────────────────────────────────────────────────────────
     create() {
         const levelData = this.getLevelData();
+
+        // Reset all terminal state so re-entering a level works correctly
+        this.terminalLines = [""];
+        this.cursorLine = 0;
+        this.cursorCol = 0;
+        this.terminalActive = false;
+        this.terminalSolved = false;
+        this.activeAction = null;
 
         this.levelTranscript = levelData.transcript;
         this.levelCorrectAnswer = levelData.correctAnswer;
@@ -800,6 +807,11 @@ export abstract class BaseLevel extends Scene {
             return;
         }
 
+        // Reset executor trace log and clear the blackboard before each call
+        // so we always show only the trace for the current function call
+        this.executor.reset();
+        this.clearTraceTable();
+
         // Reset executor state and reload transcript variables so lines above
         // the cursor run cleanly with fresh state each time
         this.executor.resetPlayerVariables();
@@ -816,20 +828,44 @@ export abstract class BaseLevel extends Scene {
         // The executor resolves its arguments (including nested calls) internally.
         const result = this.executor.callForTelephone(span.fullExpression);
 
-        // Build the bubble message
+        // Build the bubble message using dialogue (not the raw value)
         let message = "";
         if (result.type === "error") {
             message = `Error calling ${span.name}():\n\n${result.output}`;
         } else {
-            message = `${span.name}() says:\n\n${result.output}`;
+            message =
+                result.dialogue.length > 0 ?
+                    result.dialogue
+                :   `${span.name}() returned: ${result.output}`;
 
-            // Add a row to the blackboard trace table
+            // Rebuild trace rows from the executor's trace log.
             const traceLog = this.executor.getTraceLog();
-            const step = traceLog.length;
-            const argStr = result.args.map((a) => JSON.stringify(a)).join(", ");
-            const eventStr = `Call ${span.name}(${argStr})`;
-            const detailStr = `returns "${result.output}"`;
-            this.addTraceRow(step, eventStr, detailStr);
+            let step = 1;
+
+            for (const entry of traceLog) {
+                if (entry.event === "call") {
+                    const argStr = entry.args
+                        .map((a) => JSON.stringify(a))
+                        .join(", ");
+                    const callEvent = `Call ${entry.functionName}(${argStr})`;
+                    const callDetails =
+                        entry.args.length > 0 ?
+                            entry.args
+                                .map(
+                                    (a, i) =>
+                                        `arg${i + 1} = ${JSON.stringify(a)}`,
+                                )
+                                .join(", ")
+                        :   "(no parameters)";
+                    this.addTraceRow(step, callEvent, callDetails);
+                    step++;
+                } else {
+                    const returnEvent = `Return from ${entry.functionName}`;
+                    const returnDetails = `returns ${JSON.stringify(entry.returnValue)}`;
+                    this.addTraceRow(step, returnEvent, returnDetails);
+                    step++;
+                }
+            }
         }
 
         this.showBubble(message);
@@ -1056,8 +1092,6 @@ export abstract class BaseLevel extends Scene {
             this.BB_COL_TRACE + this.BB_COL_EVENT + this.BB_COL_DETAIL;
         const rowH = this.BB_ROW_H;
 
-        // Header text is also GameObject state. Destroy it before redrawing,
-        // otherwise clearTraceTable() leaves old header labels stacked on top.
         for (const obj of this.blackboardHeaderTexts) {
             obj.destroy();
         }
@@ -1065,11 +1099,9 @@ export abstract class BaseLevel extends Scene {
 
         g.clear();
 
-        // Header background
         g.fillStyle(0x1a3a0f, 1);
         g.fillRect(x, y, totalW, rowH);
 
-        // Outer border
         g.lineStyle(2, 0xaaddaa, 1);
         g.strokeRect(x, y, totalW, rowH);
 
@@ -1089,11 +1121,11 @@ export abstract class BaseLevel extends Scene {
             align: "center" as const,
         };
 
-        const stepHeader = this.add
+        const stepH = this.add
             .text(x + this.BB_COL_TRACE / 2, y + rowH / 2, "Step", headerStyle)
             .setOrigin(0.5);
 
-        const eventHeader = this.add
+        const eventH = this.add
             .text(
                 x + this.BB_COL_TRACE + this.BB_COL_EVENT / 2,
                 y + rowH / 2,
@@ -1102,7 +1134,7 @@ export abstract class BaseLevel extends Scene {
             )
             .setOrigin(0.5);
 
-        const detailHeader = this.add
+        const detailH = this.add
             .text(
                 x +
                     this.BB_COL_TRACE +
@@ -1114,7 +1146,7 @@ export abstract class BaseLevel extends Scene {
             )
             .setOrigin(0.5);
 
-        this.blackboardHeaderTexts.push(stepHeader, eventHeader, detailHeader);
+        this.blackboardHeaderTexts.push(stepH, eventH, detailH);
     }
 
     private normalizeTraceCellText(value: string): string {
@@ -1187,17 +1219,8 @@ export abstract class BaseLevel extends Scene {
             (this.BB_H - (this.BB_TABLE_Y - this.BB_Y) - rowH - 8) / rowH,
         );
 
-        const eventForKey = this.normalizeTraceCellText(event);
-        const detailsForKey = this.normalizeTraceCellText(details);
-        const rowKey = `${eventForKey}::${detailsForKey}`;
-
-        // Prevent repeated rows when the same telephone call is made again.
-        if (this.blackboardRowKeys.has(rowKey)) return;
-
         const rowIndex = Math.floor(this.blackboardRows.length / 3);
         if (rowIndex >= maxRows) return;
-
-        this.blackboardRowKeys.add(rowKey);
 
         const rowY = this.BB_TABLE_Y + rowH + rowIndex * rowH;
         const bg = rowIndex % 2 === 0 ? 0x2d5a1b : 0x244d16;
@@ -1241,10 +1264,7 @@ export abstract class BaseLevel extends Scene {
                 x + this.BB_COL_TRACE + 4,
                 rowY + 4,
                 this.fitTraceCellText(event, this.BB_COL_EVENT),
-                {
-                    ...cellStyle,
-                    wordWrap: { width: this.BB_COL_EVENT - 8 },
-                },
+                { ...cellStyle, wordWrap: { width: this.BB_COL_EVENT - 8 } },
             )
             .setOrigin(0, 0);
 
@@ -1253,10 +1273,7 @@ export abstract class BaseLevel extends Scene {
                 x + this.BB_COL_TRACE + this.BB_COL_EVENT + 4,
                 rowY + 4,
                 this.fitTraceCellText(details, this.BB_COL_DETAIL),
-                {
-                    ...cellStyle,
-                    wordWrap: { width: this.BB_COL_DETAIL - 8 },
-                },
+                { ...cellStyle, wordWrap: { width: this.BB_COL_DETAIL - 8 } },
             )
             .setOrigin(0, 0);
 
@@ -1268,7 +1285,6 @@ export abstract class BaseLevel extends Scene {
             obj.destroy();
         }
         this.blackboardRows = [];
-        this.blackboardRowKeys.clear();
         this.drawTraceTableHeader();
     }
 
