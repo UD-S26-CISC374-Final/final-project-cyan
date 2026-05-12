@@ -15,9 +15,7 @@ export class Level3 extends BaseLevel {
 
     create() {
         super.create();
-
         this.createBackButton();
-
         EventBus.emit("current-scene-ready", this);
     }
 
@@ -51,38 +49,62 @@ export class Level3 extends BaseLevel {
             functions: {
                 scan: (...args: (string | number | boolean)[]) => {
                     if (args.length === 0) {
-                        return "Scan what? Try: scan(badge)";
+                        return {
+                            dialogue: "Scan what? Try: scan(badge)",
+                            value: "",
+                        };
                     }
 
                     const item = String(args[0]);
 
                     if (item === "detective-badge") {
-                        return "BADGE-OK";
+                        return {
+                            dialogue:
+                                "Badge scan complete.\n" +
+                                "Security token found: BADGE-OK",
+                            value: "BADGE-OK",
+                        };
                     }
 
-                    return `Scan failed: ${item}`;
+                    return {
+                        dialogue: `Scan failed: ${item}`,
+                        value: "",
+                    };
                 },
 
                 verify: (...args: (string | number | boolean)[]) => {
                     if (args.length === 0) {
-                        return "Verify who? Try: verify(agent)";
+                        return {
+                            dialogue: "Verify who? Try: verify(agent)",
+                            value: "",
+                        };
                     }
 
                     const name = String(args[0]);
 
                     if (name === "Code") {
-                        return "AGENT-OK";
+                        return {
+                            dialogue:
+                                "Agent identity verified.\n" +
+                                "Authorization token found: AGENT-OK",
+                            value: "AGENT-OK",
+                        };
                     }
 
-                    return `Unknown agent: ${name}`;
+                    return {
+                        dialogue: `Unknown agent: ${name}`,
+                        value: "",
+                    };
                 },
 
                 unlock: (...args: (string | number | boolean)[]) => {
                     if (args.length < 2) {
-                        return (
-                            "Missing access tokens.\n" +
-                            "Call me with: unlock(badge_token, agent_token)"
-                        );
+                        return {
+                            dialogue:
+                                "Missing access tokens.\n" +
+                                "Call me with: unlock(badge_token, agent_token)",
+                            value: "",
+                        };
                     }
 
                     const badgeToken = String(args[0]);
@@ -92,25 +114,33 @@ export class Level3 extends BaseLevel {
                         badgeToken === "BADGE-OK" &&
                         agentToken === "AGENT-OK"
                     ) {
-                        return "ACCESS GRANTED";
+                        return {
+                            dialogue: "Final lock opened.\n" + "ACCESS GRANTED",
+                            value: "ACCESS GRANTED",
+                        };
                     }
 
-                    return "ACCESS DENIED";
+                    return {
+                        dialogue: "ACCESS DENIED",
+                        value: "",
+                    };
                 },
 
                 help: (...args: (string | number | boolean)[]) => {
                     if (args.length === 0) {
-                        return (
-                            "FINAL ACCESS\n" +
-                            "------------\n" +
-                            "The final door requires two tokens.\n" +
-                            "Use scan(badge) to get the badge token.\n" +
-                            "Use verify(agent) to get the agent token.\n" +
-                            "Then use unlock(token1, token2).\n" +
-                            "Finally print() the result.\n" +
-                            "\n" +
-                            "Hint: nested calls can solve this in one line."
-                        );
+                        return {
+                            dialogue:
+                                "FINAL ACCESS\n" +
+                                "------------\n" +
+                                "The final door requires two tokens.\n" +
+                                "Use scan(badge) to get the badge token.\n" +
+                                "Use verify(agent) to get the agent token.\n" +
+                                "Then use unlock(token1, token2).\n" +
+                                "Finally print() the result.\n" +
+                                "\n" +
+                                "Hint: nested calls can solve this in one line.",
+                            value: "",
+                        };
                     }
 
                     const funcName = String(args[0]);
@@ -131,10 +161,14 @@ export class Level3 extends BaseLevel {
                             "With a function name: describes that function.",
                     };
 
-                    return (
+                    const desc =
                         descriptions[funcName] ??
-                        `No information found for '${funcName}'.`
-                    );
+                        `No information found for '${funcName}'.`;
+
+                    return {
+                        dialogue: desc,
+                        value: "",
+                    };
                 },
             },
         };
