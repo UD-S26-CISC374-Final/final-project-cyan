@@ -16,8 +16,16 @@ export class Preloader extends Scene {
 
     preload() {
         this.load.setPath("assets");
-        // Add any future Detective Code assets here
         this.load.image("logo", "logo.png");
+
+        // Detective Code game assets
+        this.load.image("bg", "Detective_code_background.png");
+        this.load.image("whiteboard", "Detective_code_whiteboard.png");
+        this.load.image("blackboard", "Detective_code_blackboard.png");
+        this.load.image("table", "Detective_code_table.png");
+        this.load.image("keyboard", "Detective_code_keyboard.png");
+        this.load.image("telephone", "Detective_code_telephone.png");
+        this.load.image("printer", "Detective_code_printer.png");
     }
 
     create() {

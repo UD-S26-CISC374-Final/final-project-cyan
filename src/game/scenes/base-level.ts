@@ -21,36 +21,37 @@ export abstract class BaseLevel extends Scene {
 
     // ── Desk ──────────────────────────────────────────────────────────────────
     protected readonly DESK_X = 0;
-    protected readonly DESK_Y = 560;
+    protected readonly DESK_Y = 650;
     protected readonly DESK_W = 1024;
-    protected readonly DESK_H = 208;
+    protected readonly DESK_H = 160;
 
     // ── Smartboard (top-left) ─────────────────────────────────────────────────
-    protected readonly SB_X = 10;
-    protected readonly SB_Y = 10;
-    protected readonly SB_W = 500;
-    protected readonly SB_H = 540;
-    protected readonly TRANSCRIPT_H = 340;
+    protected readonly SB_X = 135;
+    protected readonly SB_Y = 55;
+    protected readonly SB_W = 370;
+    protected readonly SB_H = 394;
+    protected readonly TRANSCRIPT_H = 240;
     protected readonly TERMINAL_Y = this.SB_Y + this.TRANSCRIPT_H + 4;
     protected readonly TERMINAL_H = this.SB_H - this.TRANSCRIPT_H - 4;
 
     // ── Blackboard (top-right) ────────────────────────────────────────────────
     protected readonly BB_X = 520;
-    protected readonly BB_Y = 10;
-    protected readonly BB_W = 494;
-    protected readonly BB_H = 540;
+    protected readonly BB_Y = 55;
+    protected readonly BB_W = 371;
+    protected readonly BB_H = 394;
 
-    // Blackboard table layout
-    protected readonly BB_TABLE_X = 528;
-    protected readonly BB_TABLE_Y = 50;
-    protected readonly BB_COL_TRACE = 44;
-    protected readonly BB_COL_EVENT = 148;
-    protected readonly BB_COL_DETAIL = 216;
-    protected readonly BB_ROW_H = 36;
+    // Blackboard table layout — follows BB position
+    protected readonly BB_TABLE_X = this.BB_X + 30;
+    protected readonly BB_TABLE_Y = this.BB_Y + 40;
+    protected readonly BB_COL_TRACE = 36;
+    protected readonly BB_COL_EVENT = 122;
+    protected readonly BB_COL_DETAIL = 155;
+    protected readonly BB_ROW_H = 28;
 
     // ── Desk items ────────────────────────────────────────────────────────────
-    protected readonly ITEM_Y = this.DESK_Y + 20;
-    protected readonly ITEM_H = 120;
+    // Restored to previous working positions
+    protected readonly ITEM_Y = this.DESK_Y - 100;
+    protected readonly ITEM_H = 100;
     protected readonly ITEM_W = 200;
     protected readonly KEYBOARD_X = 100;
     protected readonly PHONE_X = 412;
@@ -60,11 +61,11 @@ export abstract class BaseLevel extends Scene {
     protected readonly PHONE_CENTER_Y = this.ITEM_Y + this.ITEM_H / 2;
 
     // ── Word bubble ───────────────────────────────────────────────────────────
-    protected readonly BUBBLE_W = 460;
-    protected readonly BUBBLE_H = 320;
+    protected readonly BUBBLE_W = 380;
+    protected readonly BUBBLE_H = 280;
     protected readonly BUBBLE_TAIL_H = 40;
-    protected readonly BUBBLE_DEFAULT_X = 500;
-    protected readonly BUBBLE_Y = 180;
+    protected readonly BUBBLE_DEFAULT_X = 420;
+    protected readonly BUBBLE_Y = 200;
 
     // ── Report panel ──────────────────────────────────────────────────────────
     protected readonly REPORT_W = 340;
@@ -73,8 +74,8 @@ export abstract class BaseLevel extends Scene {
     protected readonly REPORT_Y = 30;
 
     // ── Hint box ──────────────────────────────────────────────────────────────
-    protected readonly HINT_Y = 630;
-    protected readonly HINT_H = 90;
+    protected readonly HINT_Y = 620;
+    protected readonly HINT_H = 80;
 
     // ── Terminal state ────────────────────────────────────────────────────────
     protected terminalLines: string[] = [""];
@@ -201,150 +202,185 @@ export abstract class BaseLevel extends Scene {
 
     // ── Layout ────────────────────────────────────────────────────────────────
     private buildLayout(transcript: string) {
+        // ── Background ────────────────────────────────────────────────────────
+        this.add
+            .image(this.W / 2, this.H / 2, "bg")
+            .setDisplaySize(this.W, this.H)
+            .setDepth(0);
+
+        // ── Table ─────────────────────────────────────────────────────────────
         this.desk = this.add
             .rectangle(
                 this.DESK_X + this.DESK_W / 2,
                 this.DESK_Y + this.DESK_H / 2,
                 this.DESK_W,
                 this.DESK_H,
-                0x8b4513,
+                0x000000,
+                0,
             )
-            .setStrokeStyle(4, 0x5c2d0a);
+            .setDepth(1);
 
+        this.add
+            .image(this.W / 2, this.DESK_Y + 40, "table")
+            .setDisplaySize(848, 160)
+            .setDepth(1);
+
+        // ── Smartboard (whiteboard asset) ─────────────────────────────────────
         this.smartboard = this.add
             .rectangle(
                 this.SB_X + this.SB_W / 2,
                 this.SB_Y + this.SB_H / 2,
                 this.SB_W,
                 this.SB_H,
-                0x1a1a2e,
+                0x000000,
+                0,
             )
-            .setStrokeStyle(4, 0x4a9eff);
+            .setDepth(1);
 
+        this.add
+            .image(
+                this.SB_X + this.SB_W / 2,
+                this.SB_Y + this.SB_H / 2,
+                "whiteboard",
+            )
+            .setDisplaySize(370, 394)
+            .setDepth(1);
+
+        // Transcript panel — white writing area inside whiteboard frame
         this.transcriptPanel = this.add
             .rectangle(
                 this.SB_X + this.SB_W / 2,
                 this.SB_Y + this.TRANSCRIPT_H / 2,
-                this.SB_W - 8,
-                this.TRANSCRIPT_H - 4,
+                this.SB_W - 30,
+                this.TRANSCRIPT_H - 16,
                 0xffffff,
             )
-            .setStrokeStyle(2, 0xaaaaaa);
+            .setDepth(2);
 
         this.transcriptText = this.add
-            .text(this.SB_X + 12, this.SB_Y + 10, transcript, {
+            .text(this.SB_X + 18, this.SB_Y + 10, transcript, {
                 fontFamily: "Courier New",
-                fontSize: "12px",
+                fontSize: "10px",
                 color: "#111111",
-                wordWrap: { width: this.SB_W - 28 },
+                wordWrap: { width: this.SB_W - 40 },
             })
-            .setOrigin(0, 0);
+            .setOrigin(0, 0)
+            .setDepth(3);
 
+        // Terminal panel — dark area below transcript
         this.terminalPanel = this.add
             .rectangle(
                 this.SB_X + this.SB_W / 2,
                 this.TERMINAL_Y + this.TERMINAL_H / 2,
-                this.SB_W - 8,
-                this.TERMINAL_H - 4,
+                this.SB_W - 30,
+                this.TERMINAL_H - 16,
                 0x0a120a,
             )
-            .setStrokeStyle(2, 0x39ff14);
+            .setStrokeStyle(2, 0x39ff14)
+            .setDepth(2);
 
         this.terminalText = this.add
-            .text(this.SB_X + 12, this.TERMINAL_Y + 10, "", {
+            .text(this.SB_X + 18, this.TERMINAL_Y + 10, "", {
                 fontFamily: "Courier New",
-                fontSize: "14px",
+                fontSize: "12px",
                 color: "#39ff14",
-                wordWrap: { width: this.SB_W - 28 },
-                padding: { bottom: 8 },
-                lineSpacing: 6,
+                wordWrap: { width: this.SB_W - 40 },
+                padding: { bottom: 6 },
+                lineSpacing: 3,
             })
-            .setOrigin(0, 0);
+            .setOrigin(0, 0)
+            .setDepth(3);
 
+        // ── Blackboard asset ──────────────────────────────────────────────────
         this.blackboard = this.add
             .rectangle(
                 this.BB_X + this.BB_W / 2,
                 this.BB_Y + this.BB_H / 2,
                 this.BB_W,
                 this.BB_H,
-                0x2d5a1b,
+                0x000000,
+                0,
             )
-            .setStrokeStyle(4, 0x8b6914);
+            .setDepth(1);
+
+        this.add
+            .image(
+                this.BB_X + this.BB_W / 2,
+                this.BB_Y + this.BB_H / 2,
+                "blackboard",
+            )
+            .setDisplaySize(371, 394)
+            .setDepth(1);
 
         this.blackboardLabel = this.add
             .text(
                 this.BB_X + this.BB_W / 2,
                 this.BB_Y + 12,
-                "BLACKBOARD — Function Trace Table",
+                "Function Trace Table",
                 {
                     fontFamily: "Courier New",
-                    fontSize: "13px",
-                    color: "#e8f5e1",
+                    fontSize: "11px",
+                    color: "#ffffff",
                     align: "center",
                 },
             )
-            .setOrigin(0.5, 0);
+            .setOrigin(0.5, 0)
+            .setDepth(3);
 
-        this.blackboardGraphics = this.add.graphics();
+        this.blackboardGraphics = this.add.graphics().setDepth(2);
         this.drawTraceTableHeader();
 
+        // ── Desk items ────────────────────────────────────────────────────────
+        // Invisible interactive rectangles for click detection;
+        // sprites are placed on top at the same positions.
         const y = this.ITEM_Y;
         const h = this.ITEM_H;
         const w = this.ITEM_W;
 
+        // Keyboard
         this.keyboard = this.add
-            .rectangle(this.KEYBOARD_X + w / 2, y + h / 2, w, h, 0x2c3e6b)
-            .setStrokeStyle(3, 0x7799ff)
-            .setInteractive({ useHandCursor: true });
+            .rectangle(this.KEYBOARD_X + w / 2, y + h / 2, w, h, 0x000000, 0)
+            .setInteractive({ useHandCursor: true })
+            .setDepth(2);
+
+        this.add
+            .image(this.KEYBOARD_X + w / 2, y + h / 2 + 10, "keyboard")
+            .setDisplaySize(156, 30)
+            .setDepth(2);
+
         this.keyboardLabel = this.add
-            .text(
-                this.KEYBOARD_X + w / 2,
-                y + h / 2,
-                "KEYBOARD\n(click to type)",
-                {
-                    fontFamily: "Courier New",
-                    fontSize: "13px",
-                    color: "#ccd9ff",
-                    align: "center",
-                },
-            )
-            .setOrigin(0.5);
+            .text(0, 0, "", { fontSize: "1px" })
+            .setDepth(0);
 
+        // Telephone
         this.telephone = this.add
-            .rectangle(this.PHONE_X + w / 2, y + h / 2, w, h, 0x8b0000)
-            .setStrokeStyle(3, 0xff4444)
-            .setInteractive({ useHandCursor: true });
-        this.telephoneLabel = this.add
-            .text(
-                this.PHONE_X + w / 2,
-                y + h / 2,
-                "TELEPHONE\n(click to call)",
-                {
-                    fontFamily: "Courier New",
-                    fontSize: "13px",
-                    color: "#ffcccc",
-                    align: "center",
-                },
-            )
-            .setOrigin(0.5);
+            .rectangle(this.PHONE_X + w / 2, y + h / 2, w, h, 0x000000, 0)
+            .setInteractive({ useHandCursor: true })
+            .setDepth(2);
 
+        this.add
+            .image(this.PHONE_X + w / 2, y + h / 2 - 15, "telephone")
+            .setDisplaySize(154, 82)
+            .setDepth(2);
+
+        this.telephoneLabel = this.add
+            .text(0, 0, "", { fontSize: "1px" })
+            .setDepth(0);
+
+        // Printer
         this.printer = this.add
-            .rectangle(this.PRINTER_X + w / 2, y + h / 2, w, h, 0x1a4a1a)
-            .setStrokeStyle(3, 0x44ff44)
-            .setInteractive({ useHandCursor: true });
+            .rectangle(this.PRINTER_X + w / 2, y + h / 2, w, h, 0x000000, 0)
+            .setInteractive({ useHandCursor: true })
+            .setDepth(2);
+
+        this.add
+            .image(this.PRINTER_X + w / 2, y + h / 2 - 20, "printer")
+            .setDisplaySize(132, 107)
+            .setDepth(2);
+
         this.printerLabel = this.add
-            .text(
-                this.PRINTER_X + w / 2,
-                y + h / 2,
-                "PRINTER\n(click to print)",
-                {
-                    fontFamily: "Courier New",
-                    fontSize: "13px",
-                    color: "#ccffcc",
-                    align: "center",
-                },
-            )
-            .setOrigin(0.5);
+            .text(0, 0, "", { fontSize: "1px" })
+            .setDepth(0);
     }
 
     // ── Word bubble ───────────────────────────────────────────────────────────
@@ -1141,14 +1177,16 @@ export abstract class BaseLevel extends Scene {
 
         g.clear();
 
-        g.fillStyle(0x1a3a0f, 1);
+        // Transparent header background — blackboard shows through
+        g.fillStyle(0x000000, 0);
         g.fillRect(x, y, totalW, rowH);
 
-        g.lineStyle(2, 0xaaddaa, 1);
+        // White border and dividers
+        g.lineStyle(2, 0xffffff, 1);
         g.strokeRect(x, y, totalW, rowH);
 
         // Column dividers
-        g.lineStyle(1, 0xaaddaa, 1);
+        g.lineStyle(1, 0xffffff, 1);
         g.beginPath();
         g.moveTo(x + this.BB_COL_TRACE, y);
         g.lineTo(x + this.BB_COL_TRACE, y + rowH);
@@ -1158,14 +1196,15 @@ export abstract class BaseLevel extends Scene {
 
         const headerStyle = {
             fontFamily: "Courier New",
-            fontSize: "12px",
-            color: "#e8f5e1",
+            fontSize: "10px",
+            color: "#ffffff",
             align: "center" as const,
         };
 
         const stepH = this.add
             .text(x + this.BB_COL_TRACE / 2, y + rowH / 2, "Step", headerStyle)
-            .setOrigin(0.5);
+            .setOrigin(0.5)
+            .setDepth(3);
 
         const eventH = this.add
             .text(
@@ -1174,7 +1213,8 @@ export abstract class BaseLevel extends Scene {
                 "Event",
                 headerStyle,
             )
-            .setOrigin(0.5);
+            .setOrigin(0.5)
+            .setDepth(3);
 
         const detailH = this.add
             .text(
@@ -1186,7 +1226,8 @@ export abstract class BaseLevel extends Scene {
                 "Details",
                 headerStyle,
             )
-            .setOrigin(0.5);
+            .setOrigin(0.5)
+            .setDepth(3);
 
         this.blackboardHeaderTexts.push(stepH, eventH, detailH);
     }
@@ -1196,7 +1237,7 @@ export abstract class BaseLevel extends Scene {
     }
 
     private fitTraceCellText(value: string, colWidth: number): string {
-        const fontSize = 11;
+        const fontSize = 9;
         const lineSpacing = 1;
         const horizontalPadding = 8;
         const verticalPadding = 8;
@@ -1265,15 +1306,15 @@ export abstract class BaseLevel extends Scene {
         if (rowIndex >= maxRows) return;
 
         const rowY = this.BB_TABLE_Y + rowH + rowIndex * rowH;
-        const bg = rowIndex % 2 === 0 ? 0x2d5a1b : 0x244d16;
 
-        this.blackboardGraphics.fillStyle(bg, 1);
+        // Transparent row background — blackboard shows through
+        this.blackboardGraphics.fillStyle(0x000000, 0);
         this.blackboardGraphics.fillRect(x, rowY, totalW, rowH);
 
-        this.blackboardGraphics.lineStyle(1, 0x6aaa6a, 1);
+        this.blackboardGraphics.lineStyle(1, 0xffffff, 1);
         this.blackboardGraphics.strokeRect(x, rowY, totalW, rowH);
 
-        this.blackboardGraphics.lineStyle(1, 0x6aaa6a, 1);
+        this.blackboardGraphics.lineStyle(1, 0xffffff, 1);
         this.blackboardGraphics.beginPath();
         this.blackboardGraphics.moveTo(x + this.BB_COL_TRACE, rowY);
         this.blackboardGraphics.lineTo(x + this.BB_COL_TRACE, rowY + rowH);
@@ -1289,8 +1330,8 @@ export abstract class BaseLevel extends Scene {
 
         const cellStyle = {
             fontFamily: "Courier New",
-            fontSize: "11px",
-            color: "#d0f0d0",
+            fontSize: "9px",
+            color: "#ffffff",
             lineSpacing: 1,
         };
 
@@ -1299,7 +1340,8 @@ export abstract class BaseLevel extends Scene {
                 ...cellStyle,
                 align: "center" as const,
             })
-            .setOrigin(0.5);
+            .setOrigin(0.5)
+            .setDepth(3);
 
         const eventText = this.add
             .text(
@@ -1308,7 +1350,8 @@ export abstract class BaseLevel extends Scene {
                 this.fitTraceCellText(event, this.BB_COL_EVENT),
                 { ...cellStyle, wordWrap: { width: this.BB_COL_EVENT - 8 } },
             )
-            .setOrigin(0, 0);
+            .setOrigin(0, 0)
+            .setDepth(3);
 
         const detailText = this.add
             .text(
@@ -1317,7 +1360,8 @@ export abstract class BaseLevel extends Scene {
                 this.fitTraceCellText(details, this.BB_COL_DETAIL),
                 { ...cellStyle, wordWrap: { width: this.BB_COL_DETAIL - 8 } },
             )
-            .setOrigin(0, 0);
+            .setOrigin(0, 0)
+            .setDepth(3);
 
         this.blackboardRows.push(stepText, eventText, detailText);
     }
